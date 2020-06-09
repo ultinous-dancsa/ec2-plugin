@@ -2,11 +2,8 @@ package hudson.plugins.ec2.win;
 
 import hudson.model.Descriptor;
 import hudson.model.TaskListener;
-import hudson.plugins.ec2.EC2AbstractSlave;
-import hudson.plugins.ec2.EC2Computer;
-import hudson.plugins.ec2.EC2ComputerLauncher;
-import hudson.plugins.ec2.EC2HostAddressProvider;
-import hudson.plugins.ec2.SlaveTemplate;
+import hudson.plugins.ec2.*;
+import hudson.plugins.ec2.util.RemoteLongProcess;
 import hudson.plugins.ec2.win.winrm.WindowsProcess;
 import hudson.remoting.Channel;
 import hudson.remoting.Channel.Listener;
@@ -14,10 +11,7 @@ import hudson.slaves.ComputerLauncher;
 import hudson.Util;
 import hudson.os.WindowsUtil;
 
-import java.io.EOFException;
-import java.io.IOException;
-import java.io.OutputStream;
-import java.io.PrintStream;
+import java.io.*;
 import java.nio.charset.StandardCharsets;
 import java.util.concurrent.TimeUnit;
 
@@ -36,6 +30,7 @@ import javax.net.ssl.SSLException;
 
 public class EC2WindowsLauncher extends EC2ComputerLauncher {
     private static final String AGENT_JAR = "remoting.jar";
+    final RemoteConnection  remoteConnection = null;
 
     final long sleepBetweenAttempts = TimeUnit.SECONDS.toMillis(10);
 
@@ -53,7 +48,7 @@ public class EC2WindowsLauncher extends EC2ComputerLauncher {
             throw new IOException("Could not find corresponding slave template for " + computer.getDisplayName());
         }
 
-        final WinConnection connection = connectToWinRM(computer, node, template, logger);
+        final RemoteConnection connection = connectToWinRM(computer, node, template, logger);
         
         try {
             String initScript = node.initScript;
@@ -61,37 +56,28 @@ public class EC2WindowsLauncher extends EC2ComputerLauncher {
                     : "C:\\Windows\\Temp\\");
 
             logger.println("Creating tmp directory if it does not exist");
-            WindowsProcess mkdirProcess = connection.execute("if not exist " + tmpDir + " mkdir " + tmpDir);
-            int exitCode = mkdirProcess.waitFor();
-            if (exitCode != 0) {
+            int exitCode = remoteConnection.executeProcess("if not exist " + tmpDir + " mkdir " + tmpDir);
+            if ( exitCode != 0 ) {
                 logger.println("Creating tmpdir failed=" + exitCode);
                 return;
             }
 
             if (initScript != null && initScript.trim().length() > 0 && !connection.exists(tmpDir + ".jenkins-init")) {
                 logger.println("Executing init script");
-                try(OutputStream init = connection.putFile(tmpDir + "init.bat")) {
-                    init.write(initScript.getBytes("utf-8"));
-                }
+                remoteConnection.writeRemoteFile(tmpDir + "init.bat", initScript);
 
-                WindowsProcess initProcess = connection.execute("cmd /c " + tmpDir + "init.bat");
-                IOUtils.copy(initProcess.getStdout(), logger);
+                exitCode = remoteConnection.executeProcess("cmd /c " + tmpDir + "init.bat", logger);
 
-                int exitStatus = initProcess.waitFor();
-                if (exitStatus != 0) {
-                    logger.println("init script failed: exit code=" + exitStatus);
+                if (exitCode != 0) {
+                    logger.println("init script failed: exit code=" + exitCode);
                     return;
                 }
 
-                try(OutputStream initGuard = connection.putFile(tmpDir + ".jenkins-init")) {
-                    initGuard.write("init ran".getBytes(StandardCharsets.UTF_8));
-                }
+                remoteConnection.writeRemoteFile(tmpDir + ".jenkins-init","init ran");
                 logger.println("init script ran successfully");
             }
 
-            try(OutputStream agentJar = connection.putFile(tmpDir + AGENT_JAR)) {
-                agentJar.write(Jenkins.get().getJnlpJars(AGENT_JAR).readFully());
-            }
+            remoteConnection.writeRemoteFile(tmpDir + AGENT_JAR, new ByteArrayInputStream(Jenkins.get().getJnlpJars(AGENT_JAR).readFully()));
 
             logger.println("remoting.jar sent remotely. Bootstrapping it");
 
@@ -100,7 +86,8 @@ public class EC2WindowsLauncher extends EC2ComputerLauncher {
             final String workDir = Util.fixEmptyAndTrim(remoteFS) != null ? remoteFS : tmpDir;
             final String launchString = "java " + (jvmopts != null ? jvmopts : "") + " -jar " + tmpDir + AGENT_JAR + " -workDir " + workDir;
             logger.println("Launching via WinRM:" + launchString);
-            final WindowsProcess process = connection.execute(launchString, 86400);
+
+            final RemoteLongProcess process = remoteConnection.runProcess(launchString);
             computer.setChannel(process.getStdout(), process.getStdin(), logger, new Listener() {
                 @Override
                 public void onClosed(Channel channel, IOException cause) {
@@ -124,7 +111,7 @@ public class EC2WindowsLauncher extends EC2ComputerLauncher {
     }
 
     @Nonnull
-    private WinConnection connectToWinRM(EC2Computer computer, EC2AbstractSlave node, SlaveTemplate template, PrintStream logger) throws AmazonClientException,
+    private RemoteConnection connectToWinRM(EC2Computer computer, EC2AbstractSlave node, SlaveTemplate template, PrintStream logger) throws AmazonClientException,
             InterruptedException {
         final long minTimeout = 3000;
         long timeout = node.getLaunchTimeoutInMillis(); // timeout is less than 0 when jenkins is booting up.
@@ -135,7 +122,7 @@ public class EC2WindowsLauncher extends EC2ComputerLauncher {
 
         logger.println(node.getDisplayName() + " booted at " + node.getCreatedTime());
         boolean alreadyBooted = (startTime - node.getCreatedTime()) > TimeUnit.MINUTES.toMillis(3);
-        WinConnection connection = null;
+        RemoteWinRmConnection connection = null;
         while (true) {
             boolean allowSelfSignedCertificate = node.isAllowSelfSignedCertificate();
 
@@ -176,12 +163,11 @@ public class EC2WindowsLauncher extends EC2ComputerLauncher {
                             logger.println("WARNING: For password retrieval remote admin must be Administrator, ignoring user provided value");
                         }
                         logger.println("Connecting to " + "(" + host + ") with WinRM as Administrator");
-                        connection = new WinConnection(host, "Administrator", password, allowSelfSignedCertificate);
+                        connection = new RemoteWinRmConnection(host, "Administrator", password, allowSelfSignedCertificate, node.isUseHTTPS());
                     } else { //password Specified
                         logger.println("Connecting to " + "(" + host + ") with WinRM as " + node.getRemoteAdmin());
-                        connection = new WinConnection(host, node.getRemoteAdmin(), node.getAdminPassword().getPlainText(), allowSelfSignedCertificate);
+                        connection = new RemoteWinRmConnection(host, node.getRemoteAdmin(), node.getAdminPassword().getPlainText(), allowSelfSignedCertificate,node.isUseHTTPS());
                     }
-                    connection.setUseHTTPS(node.isUseHTTPS());
                 }
 
                 if (!connection.pingFailingIfSSHHandShakeError()) {
