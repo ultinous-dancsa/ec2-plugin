@@ -10,6 +10,7 @@ import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.nio.charset.StandardCharsets;
 
 public class RemoteWinRmConnection extends RemoteConnection {
     WinConnection connection = null;
@@ -24,9 +25,14 @@ public class RemoteWinRmConnection extends RemoteConnection {
 
     @Override
     public void writeRemoteFile(String dest, String content) throws IOException {
-        this.writeRemoteFile(dest,new ByteArrayInputStream(content.getBytes("utf-8")));
+        this.writeRemoteFile(dest,new ByteArrayInputStream(content.getBytes(StandardCharsets.UTF_8)));
     }
 
+    @Override
+    public void writeRemoteFile(String dest, byte[] content) throws IOException {
+        this.writeRemoteFile(dest,new ByteArrayInputStream(content));
+
+    }
 
 
     @Override
