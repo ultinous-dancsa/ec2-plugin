@@ -39,6 +39,11 @@ public class SshHelper {
                             + (timeout / 1000) + ")");
                 }
                 String host = getEC2HostAddress(computer, template);
+                if (host == null) {
+                    logHelper.logWarning(computer,listener, "Invalid host null, your host is most likely waiting for an ip address.\n" +
+                            " Check assign public IP option if you connect by that.");
+                    throw new IOException("goto sleep");
+                }
 
                 if ((node instanceof EC2SpotSlave) && computer.getInstanceId() == null) {
                     // getInstanceId() on EC2SpotSlave can return null if the spot request doesn't yet know
