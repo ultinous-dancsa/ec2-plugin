@@ -11,7 +11,6 @@ import hudson.plugins.ec2.*;
 import hudson.plugins.ec2.ssh.verifiers.HostKey;
 import hudson.plugins.ec2.ssh.verifiers.Messages;
 import hudson.plugins.ec2.util.LogHelper;
-import hudson.plugins.ec2.win.EC2WindowsSSHLauncher;
 import jenkins.model.Jenkins;
 import org.apache.commons.lang.StringUtils;
 

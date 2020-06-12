@@ -3,11 +3,9 @@ package hudson.plugins.ec2;
 import java.io.IOException;
 import java.util.Collections;
 import java.util.List;
-import java.util.concurrent.CountDownLatch;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
-import hudson.plugins.ec2.win.EC2WindowsSSHLauncher;
 import jenkins.model.Jenkins;
 import org.apache.commons.lang.StringUtils;
 import org.kohsuke.stapler.DataBoundConstructor;
@@ -51,7 +49,7 @@ public class EC2SpotSlave extends EC2AbstractSlave implements EC2Readiness {
     public EC2SpotSlave(String name, String spotInstanceRequestId, String templateDescription, String remoteFS, int numExecutors, Mode mode, String initScript, String tmpDir, String labelString, List<? extends NodeProperty<?>> nodeProperties, String remoteAdmin, String jvmopts, String idleTerminationMinutes, List<EC2Tag> tags, String cloudName, int launchTimeout, AMITypeData amiType, ConnectionStrategy connectionStrategy, int maxTotalUses)
             throws FormException, IOException {
 
-        super(name, "", templateDescription, remoteFS, numExecutors, mode, labelString, amiType.isWindows() ? new EC2WindowsSSHLauncher() :
+        super(name, "", templateDescription, remoteFS, numExecutors, mode, labelString, amiType.isWindows() ? new EC2WindowsLauncher() :
                 new EC2UnixLauncher(), new EC2RetentionStrategy(idleTerminationMinutes), initScript, tmpDir, nodeProperties, remoteAdmin, jvmopts, false, idleTerminationMinutes, tags, cloudName, false, launchTimeout, amiType, connectionStrategy, maxTotalUses);
 
         this.name = name;

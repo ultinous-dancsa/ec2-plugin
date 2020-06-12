@@ -3,7 +3,6 @@ package hudson.plugins.ec2.util;
 import hudson.model.TaskListener;
 import hudson.plugins.ec2.EC2Cloud;
 import hudson.plugins.ec2.EC2Computer;
-import hudson.plugins.ec2.win.EC2WindowsSSHLauncher;
 
 import java.util.logging.Level;
 import java.util.logging.Logger;
