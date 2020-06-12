@@ -97,10 +97,6 @@ public class RemoteSshConnection extends RemoteConnection {
         connection.close();
     }
 
-    @Override
-    public boolean exists(String path) throws IOException {
-        throw new UnsupportedOperationException(); //platform dependent
-    }
 
     public static class AuthenticationException extends Exception{}
 

@@ -17,7 +17,6 @@ public abstract class RemoteConnection {
     abstract public RemoteLongProcess runProcess(String cmd) throws IOException;
     abstract public void close();
 
-    public abstract boolean exists(String path) throws IOException;
 
     public static class Iotpuple{
         public OutputStream stdin;
@@ -26,6 +25,12 @@ public abstract class RemoteConnection {
         public Iotpuple(OutputStream stdin, InputStream stdout) {
             this.stdin = stdin;
             this.stdout = stdout;
+        }
+    }
+
+    public  static class CommandException extends Exception{
+        public CommandException(String msg) {
+            super(msg);
         }
     }
 

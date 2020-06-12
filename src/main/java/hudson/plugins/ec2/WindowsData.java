@@ -16,9 +16,10 @@ public class WindowsData extends AMITypeData {
     private final String bootDelay;
     private final boolean specifyPassword;
     private final Boolean allowSelfSignedCertificate; //Boolean to allow nulls when the saved template doesn't have the field
+    private final boolean connectWindowsBySSH;
 
     @DataBoundConstructor
-    public WindowsData(String password, boolean useHTTPS, String bootDelay, boolean  specifyPassword, boolean allowSelfSignedCertificate) {
+    public WindowsData(String password, boolean useHTTPS, String bootDelay, boolean  specifyPassword, boolean allowSelfSignedCertificate, boolean connectWindowsBySSH) {
         this.password = Secret.fromString(password);
         this.useHTTPS = useHTTPS;
         this.bootDelay = bootDelay;
@@ -28,8 +29,14 @@ public class WindowsData extends AMITypeData {
             specifyPassword = true;
         }
         this.allowSelfSignedCertificate = allowSelfSignedCertificate;
+        this.connectWindowsBySSH = connectWindowsBySSH;
     }
-    
+
+    @Deprecated
+    public WindowsData(String password, boolean useHTTPS, String bootDelay, boolean  specifyPassword, boolean allowSelfSignedCertificate) {
+        this(password, useHTTPS, bootDelay, specifyPassword, allowSelfSignedCertificate, false);
+    }
+
     @Deprecated
     public WindowsData(String password, boolean useHTTPS, String bootDelay, boolean  specifyPassword) {
         this(password, useHTTPS, bootDelay, specifyPassword, true);
@@ -59,6 +66,10 @@ public class WindowsData extends AMITypeData {
 
     public String getBootDelay() {
         return bootDelay;
+    }
+
+    public boolean getConnectWindowsBySSH(){
+        return  connectWindowsBySSH;
     }
 
     public boolean isSpecifyPassword() {
@@ -114,6 +125,6 @@ public class WindowsData extends AMITypeData {
                 return false;
         } else if (!allowSelfSignedCertificate.equals(other.allowSelfSignedCertificate))
             return false;
-        return useHTTPS == other.useHTTPS && specifyPassword == other.specifyPassword;
+        return useHTTPS == other.useHTTPS && specifyPassword == other.specifyPassword && connectWindowsBySSH == other.connectWindowsBySSH;
     }
 }

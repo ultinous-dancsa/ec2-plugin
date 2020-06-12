@@ -66,13 +66,14 @@ public class RemoteWinRmConnection extends RemoteConnection {
         return connection.pingFailingIfSSHHandShakeError();
     }
 
+    public boolean exists(String path) throws IOException {
+        return connection.exists(path);
+    }
+
         @Override
     public void close() {
         connection.close();
     }
 
-    @Override
-    public boolean exists(String path) throws IOException {
-        return connection.exists(path);
-    }
+
 }

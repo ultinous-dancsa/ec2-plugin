@@ -32,6 +32,9 @@ THE SOFTWARE.
     <f:entry title="${%Use HTTPS}" field="useHTTPS">
         <f:checkbox default="true"/>
     </f:entry>
+    <f:entry title="Connect to Windows by SSH" field="connectWindowsBySSH">
+            <f:checkbox default="false"/>
+    </f:entry>
     <f:entry title="${%Allow Self Signed Certificate}" field="allowSelfSignedCertificate" >
         <f:checkbox default="false"/>
     </f:entry>
